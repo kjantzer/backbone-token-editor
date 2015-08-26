@@ -105,6 +105,10 @@ $(function() {
 		document.getElementById('empty').appendChild( emptyEditor.el )
 		emptyEditor.render()
 		
+		setTimeout(function(){
+            		emptyEditor.edit(true);
+            		emptyEditor.focusEnd();
+        	}, 100)
 		
 		var prefilledValue = [["I would like a ",{"label":"bannana","attrs":{"id":"1","color":"yellow"}},", but not an ",{"label":"apple","attrs":{"id":"2","color":"various"}},"."],["A few ",{"label":"strawberry","attrs":{"id":"4","color":"red"}},"s would be nice too!"]];
 		

@@ -1,0 +1,136 @@
+<html>
+<head>
+
+<title>Backbone.js Model Editor View</title>
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-44608486-7', 'kjantzer.github.io');
+  ga('send', 'pageview');
+
+</script>
+
+<!-- Backbone.js Dependencies -->
+<script src="lib/jquery.min.js"></script>
+<script src="lib/underscore.min.js"></script>
+<script src="lib/underscore.string.min.js"></script>
+<script src="lib/backbone.min.js"></script>
+<script src="lib/backbone.subviews.js"></script>
+
+<script src="lib/liquidmetal.js"></script>
+<script src="lib/require.js"></script>
+
+<link href="style.css" rel="stylesheet" type="text/css">
+<script src="token-editor.min.js"></script>
+
+</head>
+<body>
+
+
+<a href="https://github.com/kjantzer/backbone-token-editor"><img style="position: absolute; top: 0; right: 0; border: 0; z-index:10;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"></a>
+
+
+<header>
+	
+	<h1>
+		Token Editor
+	</h1>
+	
+	<h3>
+		Merging the idea of a "tag list" and "@mention" auto-complete into one.
+	</h3>
+	
+</header>
+
+<section>
+	
+	<p><b>Version 0.1.0</b></p>
+	
+	<p>A basic text editor with tokens that are used via auto-complete. Tokens cannot be modified by the keyboard but appear as "objects" within
+	the text box.</p>
+	
+	<p>The editor is designed to be used completely with the keyboard only, thus, the auto-complete results cannot be selected with the mouse.</p>
+		
+	<p>Instead, use the <b>up and down arrows</b> to choose, then press <b>enter</b> to select.</p>
+
+	<hr>
+	
+	<article>
+		
+		<h3>Empty editor</h3>
+		<div id="empty"></div>
+		<p><small><i>Try typing: bannana, apple, orange, strawberry, blueberry</i></small></p>
+		
+	</article>
+	
+	<hr>
+	
+	<article>
+		
+		<h3>Prefilled editor</h3>
+		<div id="prefilled"></div>
+		
+		<br>
+			<a onclick="prefilledString()">View as String</a> &nbsp;&nbsp;&nbsp;
+			<a onclick="prefilledJSON()">View as JSON</a>
+		
+		
+		<pre id="prefilled-json"></pre>
+		
+		
+	</article>
+	
+
+<script type="text/javascript">
+$(function() {
+	
+	require(['token-editor'], function(TokenEditor){
+		
+		var autoCompleteItems = [
+			{label: 'bannana', attrs:{id: '1', color: 'yellow'}},
+			{label: 'apple', attrs:{id: '2', color: 'various'}},
+			{label: 'orange', attrs:{id: '3', color: 'orange'}},
+			{label: 'strawberry', attrs:{id: '4', color: 'red'}},
+			{label: 'blueberry', attrs:{id: '5', color: 'blue'}},
+			{label: 'apple sauce', attrs:{id: '6', color: 'pale yellow'}},
+			{label: 'apple juice', attrs:{id: '7', color: 'pale yellow'}},
+		];
+		
+		window.emptyEditor = new TokenEditor({items: autoCompleteItems});
+		
+		document.getElementById('empty').appendChild( emptyEditor.el )
+		emptyEditor.render()
+		
+		
+		var prefilledValue = [["I would like a ",{"label":"bannana","attrs":{"id":"1","color":"yellow"}},", but not an ",{"label":"apple","attrs":{"id":"2","color":"various"}},"."],["A few ",{"label":"strawberry","attrs":{"id":"4","color":"red"}},"s would be nice too!"]];
+		
+		window.prefilledEditor = new TokenEditor({items: autoCompleteItems, value: prefilledValue});
+		
+		document.getElementById('prefilled').appendChild( prefilledEditor.el )
+		prefilledEditor.render()
+		
+		window.prefilledString = function(){
+			document.getElementById('prefilled-json').innerHTML = prefilledEditor.toString();
+		}
+		
+		window.prefilledJSON = function(){
+			
+			document.getElementById('prefilled-json').innerHTML = JSON.stringify(prefilledEditor.toJSON(), null, "  ")
+		}
+	})
+
+})
+</script>
+
+<hr>
+
+<small>Built by <a href="http://kevinjantzer.com">Kevin Jantzer</a>, <a href="http://blackstoneaudio.com">Blackstone Audio Inc.</a></small>
+
+</section>
+
+</body>
+</html>

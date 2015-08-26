@@ -29,16 +29,7 @@ define(['auto-complete'], function(AutoCompleteView){
 			editing: false, 		// set to true if you want to be in edit mode upon init
 			dblClickToEdit: true,
 			value: '',				// html string or JSON format,
-			autoComplete: {},		// options for auto complete
-			
-			// TEMP
-			//value: 'Written by <span contenteditable="false" class="token" data-id="7192"><span>Elliot Engel</span></span><br>Read by <span contenteditable="false" class="token" data-id="5851"><span>Grover Gardner</span></span>'
-			
-			//value: [["Written by ",{"label":"Elliot Engel","attrs":{"id":"7192"}}],["Read by ",{"label":"Grover Gardner","attrs":{"id":"5851"}}]]
-			
-			//value: [[{"type":"text","data":{"text":"By "}},{"type":"bubble","data":{"text":"Rick Riordan","id":"13390"}}],[{"type":"text","data":{"text":"Read by "}},{"type":"bubble","data":{"text":"David Pittu","id":"13383"}}]]
-			
-			//value: 'By <span contenteditable="false" class="token" data-id="214362"><span>Elliot Engel</span></span><br>A <span contenteditable="false" class="token" data-id="214370"><span>Skyboat Road Company</span></span>&nbsp;Production<br>Produced and directed by <span contenteditable="false" class="token" data-id="214369"><span>Stefan Rudnicki</span></span>&nbsp;and <span contenteditable="false" class="token" data-id="214371"><span>Gabrielle de Cuir</span></span><br>Essays read by <span contenteditable="false" class="token" data-id="214362"><span>Elliot Engel</span></span>; other selections read by <span contenteditable="false" class="token" data-id="214366"><span>David Birney</span></span>, <span contenteditable="false" class="token" data-id="214367"><span>Scott Brick</span></span>, <span contenteditable="false" class="token" data-id="214364"><span>Grover Gardner</span></span>, <span contenteditable="false" class="token" data-id="214365"><span>Joe Barrett</span></span>, <span contenteditable="false" class="token" data-id="214369"><span>Stefan Rudnicki</span></span>, <span contenteditable="false" class="token" data-id="214363"><span>Ralph Cosham</span></span>, and <span contenteditable="false" class="token" data-id="214368"><span>others</span></span>.<br>'
+			autoComplete: {}		// options for auto complete
 		},
 		
 		events: {

@@ -2,7 +2,7 @@
 
 > Merging the idea of a "tag list" and "@mention" auto-complete into one.
 
-[![Screenshot](http://i.imgur.com/gM2eZDW.png)](http://kjantzer.github.io/backbone-token-editor/)
+[![Screenshot](http://i.imgur.com/Wq0TAZs.png)](http://kjantzer.github.io/backbone-token-editor/)
 
 ### [DEMO](http://kjantzer.github.io/backbone-token-editor/)
 

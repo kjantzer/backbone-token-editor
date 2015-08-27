@@ -12,30 +12,30 @@
     clear: both;    
     cursor: pointer;
     
-    &:not([contenteditable=true]):after {
-        content: 'Double click to edit';
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(255,255,255,.7);
-        font-size: 1.5em;
-        line-height: 1.8em;
-        font-weight: 300;
-        text-align: left;
-        padding-left: .5em;
-        box-sizing: border-box;
-        visibility: hidden;
-        opacity: 0;
-        .transition(200ms);
-    }
+    // &:not([contenteditable=true]):after {
+    //     content: 'Double click to edit';
+    //     position: absolute;
+    //     left: 0;
+    //     top: 0;
+    //     width: 100%;
+    //     height: 100%;
+    //     background: rgba(255,255,255,.7);
+    //     font-size: 1.5em;
+    //     line-height: 1.8em;
+    //     font-weight: 300;
+    //     text-align: left;
+    //     padding-left: .5em;
+    //     box-sizing: border-box;
+    //     visibility: hidden;
+    //     opacity: 0;
+    //     .transition(200ms);
+    // }
     
-    &:not([contenteditable=true]):empty:after,
-    &:not([contenteditable=true]):hover:after {
-        visibility: visible;
-        opacity: 1;
-    }
+    // &:not([contenteditable=true]):empty:after,
+    // &:not([contenteditable=true]):hover:after {
+    //     visibility: visible;
+    //     opacity: 1;
+    // }
     
     &[contenteditable=true] {
         cursor: text;
@@ -51,14 +51,16 @@
     }
     
     &:hover,
-    &:focus {
+    &:focus,
+    &[contenteditable=true] {
         border-color: #ddd;
     }
     
-    &:not(:focus){
+    //&:not(:focus){
+    &:not([contenteditable=true]) {
         line-height: 1.3em;
         
-        > br {
+        > br.newline {
             content: '';
             display: block !important;
             height: 1px !important;
@@ -71,13 +73,14 @@
         //     margin-top: 1.3em !important;
         // }
         
-        > br + br {
-        //> br:last-child {
-            border: none;
-            margin: 0;
-        }
+        // > br + br {
+        // //> br:last-child {
+        //     border: none;
+        //     margin: 0;
+        // }
         
     }
+    
 
 	.token {
         position: relative;
@@ -91,7 +94,7 @@
 	    font-size: .9em;
 	}
     
-    &:focus .token > span {
+    &[contenteditable=true] .token > span {
 	    background: #2196F3;
         color: #fff;
     }
@@ -116,11 +119,13 @@
     position: absolute;
     z-index: 1000;
     background-color: white;
-    border: solid 1px #ccc;
     border-radius: 3px;
-    box-shadow: #ddd 0 0 10px;
+    -webkit-box-shadow: rgba(0,0,0,.2) 0 0 10px 2px;
+    -moz-box-shadow: rgba(0,0,0,.2) 0 0 10px 2px;
+    box-shadow: rgba(0,0,0,.2) 0 0 10px 2px;
     
-    &:not(.show) {
+    &:not(.show),
+    &:empty, {
         display: none !important;
     }
     

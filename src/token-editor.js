@@ -1,11 +1,13 @@
 /*
-	Token Editor 0.0.1
+	Token Editor 0.1.0
 	
 	A basic text editor with tokens that are used via auto-complete.
 	Tokens can not be modified by the keyboard but appear as "objects" within
 	the text box.
 	
 	This plugin merges the idea of a "tag list" and "@mention" auto-complete.
+	
+	http://kjantzer.github.io/backbone-token-editor/
 	
 	@author Kevin Jantzer, Blackstone Audio Inc.
 	@since 2015-08-24
@@ -14,7 +16,9 @@
 	[Bullseye](https://github.com/bevacqua/bullseye)
 	
 	TODO:
-	Inserting tokens does not get tracked in undo manager making undo/redo funky
+	- Inserting tokens does not get tracked in undo manager making undo/redo funky
+		Maybe I should create my own undo manager? would need to keep track of content and caret position.
+	- `&nbsp;` appears sometimes when typing after a token
 	
 */
 define(['auto-complete'], function(AutoCompleteView){
@@ -25,11 +29,12 @@ define(['auto-complete'], function(AutoCompleteView){
 		
 		_defaultOptions: {
 			className: '',
-			allowPaste: false,
-			editing: false, 		// set to true if you want to be in edit mode upon init
-			dblClickToEdit: true,
 			value: '',				// html string or JSON format,
-			autoComplete: {}		// options for auto complete
+			autoComplete: {},		// options for auto complete
+			allowPaste: false,
+			allowStyling: false,	// bold/italics keyboard shorcuts
+			editing: false, 		// set to true if you want to be in edit mode upon init
+			dblClickToEdit: true
 		},
 		
 		events: {
@@ -38,14 +43,18 @@ define(['auto-complete'], function(AutoCompleteView){
 			'blur': 'onBlur',
 			'keydown': 'onKeydown',
 			'keyup': 'onKeyup',
+			'keypress': 'onKeypress',
 			'paste': 'onPaste',
 			'contextmenu .token': 'onTokenClick'
 		},
 		
 		initialize: function(){
+			
 			window.tokenEditor = this; // TEMP
 			
 			this.options = _.extend(this._defaultOptions, this.options||{});
+			this.history =[];
+			this.historyAt = 0;
 			
 			if( this.options.className )
 				this.el.classList.add(this.options.className)
@@ -58,13 +67,16 @@ define(['auto-complete'], function(AutoCompleteView){
 			
 			if( this.options.items )
 				this.setAutoCompleteItems(this.options.items)
+				
+			this.setValue()
+			this.markHistory();
 			
 			if( this.options.editing )
 				this.edit();
 		},
 		
 		isEditing: function(){
-			return this.el.contentEditable == true
+			return this.el.contentEditable == 'true'
 		},
 		
 		edit: function(doEdit){
@@ -72,10 +84,6 @@ define(['auto-complete'], function(AutoCompleteView){
 		},
 		
 		render: function(){
-			
-			this.$el.html('');
-			
-			this.setValue()
 			
 			this.delegateEvents();
 			
@@ -118,9 +126,9 @@ define(['auto-complete'], function(AutoCompleteView){
 				trigger: 'none'
 			})
 			
-			if( !this.metaKey() ){		// for development, if ctrl/cmd then right click acts as normal
+			if( menu && !this.metaKey() ){		// for development, if ctrl/cmd then right click acts as normal
 				e.preventDefault();
-				e.stopPropgation();
+				e.stopPropagation();
 				return false;
 			}
 		},
@@ -138,7 +146,7 @@ define(['auto-complete'], function(AutoCompleteView){
 		},
 		
 		onDblClick: function(){
-			if( this.options.dblClickToEdit == true ){
+			if( this.options.dblClickToEdit == true && !this.isEditing() ){
 				this.edit(true)
 				this.focusEnd();
 			}
@@ -170,8 +178,9 @@ define(['auto-complete'], function(AutoCompleteView){
 			this.insertHTML( this.makeToken(d) )
 		},
 		
-		// FIXME: sometimes this replaces more than just the current word; also does replace correctly if in middle of the word.
 		replaceWithToken: function(token){
+			
+			clearTimeout( this.historyTimeout )
 			
 			var sel = window.getSelection(),
 				range = sel.getRangeAt(0),
@@ -191,7 +200,8 @@ define(['auto-complete'], function(AutoCompleteView){
 			var sel = window.getSelection(),
 				range = sel.getRangeAt(0);
 			
-			if( range.endContainer == this.el ) return;
+			if( range.endContainer == this.el 
+			|| !range.endContainer.textContent ) return;
 			
 			var text = range.endContainer.textContent.slice(0, range.endOffset ),
 				lastSpace = text.lastIndexOf(' ') > -1 ? text.lastIndexOf(' ') : text.lastIndexOf(' ');
@@ -202,23 +212,42 @@ define(['auto-complete'], function(AutoCompleteView){
 		},
 		
 		onPaste: function(e){
-			if( this.option.allowPaste != true ){
+			if( this.options.allowPaste != true ){
 				e.preventDefault(); // disable pasting so we dont have to do style cleanup
 				return false;
+			}else{
+				this.markHistoryIn(0);
 			}
 		},
 		
 		onKeydown: function(e){
 			
 			// disable style commands like bold an italic
-			// @TODO: should this be an "option"?
 			if( this.metaKey() && (e.keyCode === 66 /* bold */ || e.keyCode === 73 /* italics */)){
+				
+				if( this.options.allowStyling !== true )
+					return false;
+				else
+					this.markHistoryIn(0);
+			}
+			
+			// override undo/redo for our own built in history manager
+			if( this.metaKey() && e.keyCode === 90 ){ // ctrl/cmd + z
+				e.shiftKey ? this.redo() : this.undo()
 				return false;
 			}
 			
-			// on enter, prevent default <div> or <p> and use breaks instead
+			// on enter, force `<br>` tags instead of <div> or <p>
 			if (e.keyCode === 13) {
-				document.execCommand('insertHTML', false, '<br><br>');
+				
+				// if at the end of editor, a trailing <br> is needed to make the cursor jump to the next line
+				if( this.getSelection().start >= this.length() )
+					document.execCommand('insertHTML', false, '<br class="newline"><br>');
+				else
+					document.execCommand('insertHTML', false, '<br class="newline">');
+					
+				this.markHistoryIn(0);
+				
 				return false;
 			}
 		},
@@ -236,7 +265,15 @@ define(['auto-complete'], function(AutoCompleteView){
 			
 		},
 		
+		onKeypress: function(e){
+			this.markHistoryIn(500);
+		},
+		
 		endWithBrTag: function () {
+			
+			// dont do this if auto complete showing, cause when calling `replaceWithToken`, it would replace more than the word
+			// if 300ms passed before selecting
+			if( this.subview('auto-complete').isShowing ) return;
 			
 			if( !this.el.innerHTML.match(/<br>$/) ){
 				
@@ -244,6 +281,13 @@ define(['auto-complete'], function(AutoCompleteView){
 					this.focusEnd();
 				
 				var sel = window.getSelection();
+				
+				// no selection after telling to focus? then the editor is not in the DOM
+				if( sel.type == 'None'){
+					this.el.appendChild(document.createElement('br'))
+					return;
+				}
+				
 				var range = sel.getRangeAt(0);
 				var frag = document.createDocumentFragment()
 				var br = frag.appendChild( document.createElement('br') );
@@ -291,6 +335,8 @@ define(['auto-complete'], function(AutoCompleteView){
 	                sel.removeAllRanges();
 	                sel.addRange(range);
 	            }
+				
+				this.markHistory();
 	        }
 		
 		},
@@ -332,7 +378,7 @@ define(['auto-complete'], function(AutoCompleteView){
 						return str + self._objectTextareaObjectToHTML(d)
 				}, '')
 			})
-			return lines.join('<br>');
+			return lines.join('<br class="newline">');
 		},
 		
 		// legacy support
@@ -340,8 +386,8 @@ define(['auto-complete'], function(AutoCompleteView){
 			if( d.type == 'text' )
 				return d.data.text;
 			
-			var attrs = d.data;
-			var label = d.data.text; delete d.data.text;
+			var attrs = _.clone(d.data);
+			var label = d.data.text; delete attrs.text;
 			
 			return this.makeToken({label: label, attrs: attrs})
 		},
@@ -351,7 +397,7 @@ define(['auto-complete'], function(AutoCompleteView){
 		},
 		
 		toString: function(){
-			return _.stripTags( this.toHTML().replace(/<br>/g, "\n") )
+			return _.stripTags( this.toHTML().replace(/<br class="newline">/g, "\n") )
 		},
 		
 		// creates a JSON structure of the editor content
@@ -362,7 +408,7 @@ define(['auto-complete'], function(AutoCompleteView){
 			if( !html ) return [];
 			
 			// split each row by the `<br>` tag
-			var json = html.split('<br>');
+			var json = html.split('<br class="newline">');
 			
 			// covert each row to array of strings and objects 
 			json = _.map(json, function(str){
@@ -464,7 +510,15 @@ define(['auto-complete'], function(AutoCompleteView){
 		
 		getSelection: function() {
 			
-	        var range = window.getSelection().getRangeAt(0);
+			var sel = window.getSelection();
+			
+			if( sel.type == 'None' )
+				return {
+					start: this.length(),
+					end: this.length()
+				}
+				
+	        var range = sel.getRangeAt(0);
 	        
 			var preSelectionRange = range.cloneRange();
 	        preSelectionRange.selectNodeContents(this.el);
@@ -480,7 +534,37 @@ define(['auto-complete'], function(AutoCompleteView){
 		metaKey: function(e){
 			e = e || event;
 			return e && (e.ctrlKey || e.altKey || e.metaKey);
-		}
+		},
+		
+		markHistory: function(){
+			// splices history at current history index (and removes all history after current index)
+			this.history.splice(this.historyAt+1, Number.MAX_VALUE, {
+				caret: this.getSelection(),
+				content: this.el.innerHTML
+			})
+			
+			this.historyAt = this.history.length - 1;
+		},
+		
+		markHistoryIn: function(ms){
+			clearTimeout( this.historyTimeout )
+			this.historyTimeout = setTimeout(this.markHistory.bind(this), ms||0);
+		},
+		
+		undo: function(){
+			if( this.historyAt <= 0 ) return;
+			this.applyHistory(this.history[ --this.historyAt ])
+		},
+		
+		redo: function(){
+			if( this.historyAt >= this.history.length - 1 ) return;
+			this.applyHistory(this.history[ ++this.historyAt ])
+		},
+		
+		applyHistory: function(hist){
+			this.el.innerHTML = hist.content;
+			this.setSelection(hist.caret.start, hist.caret.end)
+		},
 		
 	})
 	

@@ -1,4 +1,4 @@
-# Token Editor 0.0.1
+# Token Editor 0.1.0
 
 > Merging the idea of a "tag list" and "@mention" auto-complete into one.
 

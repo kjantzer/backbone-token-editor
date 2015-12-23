@@ -1,5 +1,5 @@
 /*
-	Token Editor 0.1.0
+	Token Editor 0.2.0
 	
 	A basic text editor with tokens that are used via auto-complete.
 	Tokens can not be modified by the keyboard but appear as "objects" within
@@ -16,9 +16,9 @@
 	[Bullseye](https://github.com/bevacqua/bullseye)
 	
 	TODO:
-	- Inserting tokens does not get tracked in undo manager making undo/redo funky
-		Maybe I should create my own undo manager? would need to keep track of content and caret position.
 	- `&nbsp;` appears sometimes when typing after a token
+	- maybe remove need for Backbone.subviews?
+	- with multiLines:false, think about adding styles and code to make it perform more like an input
 	
 */
 define(['auto-complete'], function(AutoCompleteView){
@@ -31,6 +31,7 @@ define(['auto-complete'], function(AutoCompleteView){
 			className: '',
 			value: '',				// html string or JSON format,
 			autoComplete: {},		// options for auto complete
+			multiLines: true,
 			allowPaste: false,
 			allowStyling: false,	// bold/italics keyboard shorcuts
 			editing: false, 		// set to true if you want to be in edit mode upon init
@@ -44,15 +45,14 @@ define(['auto-complete'], function(AutoCompleteView){
 			'keydown': 'onKeydown',
 			'keyup': 'onKeyup',
 			'keypress': 'onKeypress',
-			'paste': 'onPaste',
-			'contextmenu .token': 'onTokenClick'
+			'paste': 'onPaste'
 		},
 		
 		initialize: function(){
 			
 			window.tokenEditor = this; // TEMP
 			
-			this.options = _.extend(this._defaultOptions, this.options||{});
+			this.options = _.extend({}, this._defaultOptions, this.options||{});
 			this.history =[];
 			this.historyAt = 0;
 			
@@ -104,33 +104,6 @@ define(['auto-complete'], function(AutoCompleteView){
 			html ? this.el.classList.remove('empty') : this.el.classList.add('empty')
 			
 			this.endWithBrTag();
-		},
-		
-		tokenMenu: function(el){
-			if( this.options.tokenMenu )
-				return function(){ return this.options.tokenMenu(this, el, this.items) }.bind(this)
-			else 
-				return false;
-		},
-		
-		onTokenClick: function(e){
-			
-			if( !this.isEditing() ) return;
-			
-			var menu = this.tokenMenu(e.currentTarget);
-			
-			if( menu )
-			$(e.currentTarget).dropdown(menu, {
-				align: 'bottom',
-				w: 120,
-				trigger: 'none'
-			})
-			
-			if( menu && !this.metaKey() ){		// for development, if ctrl/cmd then right click acts as normal
-				e.preventDefault();
-				e.stopPropagation();
-				return false;
-			}
 		},
 		
 		// sets the items available in 'auto complete'
@@ -222,6 +195,11 @@ define(['auto-complete'], function(AutoCompleteView){
 		
 		onKeydown: function(e){
 			
+			if( e.which === 27 ){ // esc
+				this.trigger('cancel', this)
+				return;
+			}
+			
 			// disable style commands like bold an italic
 			if( this.metaKey() && (e.keyCode === 66 /* bold */ || e.keyCode === 73 /* italics */)){
 				
@@ -239,6 +217,8 @@ define(['auto-complete'], function(AutoCompleteView){
 			
 			// on enter, force `<br>` tags instead of <div> or <p>
 			if (e.keyCode === 13) {
+				
+				if( this.options.multiLines != true ) return false;
 				
 				// if at the end of editor, a trailing <br> is needed to make the cursor jump to the next line
 				if( this.getSelection().start >= this.length() )
@@ -259,6 +239,10 @@ define(['auto-complete'], function(AutoCompleteView){
 				this.subview('auto-complete').render( this.currentWord() )
 			}.bind(this))
 			
+			// backspace
+			if( e.which == 8 )
+				this.markHistoryIn(500);
+			
 			// make sure we end with a `<br>` tag.
 			clearTimeout( this.keyupTimeout )
 			this.keyupTimeout = setTimeout(this.endWithBrTag.bind(this), 300);
@@ -271,8 +255,8 @@ define(['auto-complete'], function(AutoCompleteView){
 		
 		endWithBrTag: function () {
 			
-			// dont do this if auto complete showing, cause when calling `replaceWithToken`, it would replace more than the word
-			// if 300ms passed before selecting
+			// dont do this if auto complete showing, cause when calling `replaceWithToken`;
+			// it would replace more than the word if 300ms passed before selecting
 			if( this.subview('auto-complete').isShowing ) return;
 			
 			if( !this.el.innerHTML.match(/<br>$/) ){
@@ -295,6 +279,7 @@ define(['auto-complete'], function(AutoCompleteView){
 				//document.execCommand('insertHTML', false, frag);
 				this.el.appendChild(frag)
 				
+				// this breaks in Safari....
 				range = range.cloneRange();
 				range.setStartBefore(br);
 				range.collapse(true);
@@ -351,7 +336,7 @@ define(['auto-complete'], function(AutoCompleteView){
 		
 		// focuses editor and sets caret position
 		focus: function(atChar){
-			if( atChar < 0 || atChar > this.length() )
+			if( atChar === undefined || atChar < 0 || atChar > this.length() )
 				atChar = 0;
 			
 			this.setSelection(atChar, atChar);
@@ -396,8 +381,10 @@ define(['auto-complete'], function(AutoCompleteView){
 			return this.el.innerHTML.replace(/<br>$/, '');
 		},
 		
-		toString: function(){
-			return _.stripTags( this.toHTML().replace(/<br class="newline">/g, "\n") )
+		toString: function(lineSeparator){
+			lineSeparator = lineSeparator || "\n";
+			var html = _.stripTags( this.toHTML().replace(/<br class="newline">/g, "||") )
+			return html.replace(/\|\|/g, lineSeparator)
 		},
 		
 		// creates a JSON structure of the editor content

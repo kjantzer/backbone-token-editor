@@ -49,11 +49,11 @@ define(['../lib/bullseye'], function(bullseye){
 		
 		_onKeydown: function(e){
 			
-			if( e.which == 27 || e.which == 38 || e.which == 40 || e.which == 13 ){
+			if( e.which == 27 || e.which == 38 || e.which == 40 || e.which == 13 || e.which == 9 ){
 				
 				if( e.which == 27 ) // esc
 					this.hide();
-				else if( e.which == 13 ) // enter
+				else if( e.which == 13 || e.which == 9 ) // enter or tab
 					this.onSelect()
 				else if( e.which == 38 ) // up
 					this.selectPrev();
@@ -123,8 +123,9 @@ define(['../lib/bullseye'], function(bullseye){
 			this.$el.append('<div class="'+(indx==this.selected?'selected':'')+'" data=id="'+m.id+'">'+m.label+'</div>')
 		},
 		
-		score: function(str, term){
-			if( typeof LiquidMetal === 'undefined' ){
+		_score: function(str, term){
+			if( typeof LiquidMetal === 'undefined' && !this._noScoreWarning ){
+				this._noScoreWarning = true;
 				console.warn('TokenEditor: cannot score auto complete results; LiquidMetal plugin is missing.');
 				return 1;
 			}
@@ -133,13 +134,31 @@ define(['../lib/bullseye'], function(bullseye){
 			}
 		},
 		
+		_scoreItem: function(m, word){
+			var scores = []
+			
+			scores.push(this._score(m.label, word))
+			
+			// simple string hint
+			if( m.hint && typeof m.hint == 'string' )
+				scores.push(this._score(m.hint, word))
+			
+			// array of hints
+			if( m.hint && Array.isArray(m.hint) )
+				m.hint.forEach(function(str){
+					scores.push(this._score(str, word))
+				})
+			
+			return scores.sort().pop() // return the highest score
+		},
+		
 		menuFor: function(word){
 			var menu = [];
 			
 			if( this.options.items )
 			this.options.items.forEach(function(m){
 				
-				var score = this.score(m.label, word)
+				var score = this._scoreItem(m, word);
 				
 				if( score >= this.options.minScore ){
 					
